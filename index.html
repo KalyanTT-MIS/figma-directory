@@ -95,8 +95,14 @@ function staleness(d) {
 }
 
 function openFrame(fileId, pageId, frameId) {
-  // Figma URL format: ?node-id=PAGE_ID:FRAME_ID (colon separator, not encoded)
+  // Figma URL format: ?node-id=PAGE_ID:FRAME_ID
+  if (!pageId || !frameId) { 
+    alert("Frame information missing. Please re-index the file.");
+    return; 
+  }
+  // Ensure format is correct for Figma
   const link = "https://www.figma.com/design/" + fileId + "?node-id=" + pageId + ":" + frameId;
+  console.log("Opening frame:", link);
   window.open(link, "_blank");
 }
 
