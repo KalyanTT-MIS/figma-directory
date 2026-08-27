@@ -33,9 +33,8 @@
   .time{font-size:12px;color:rgba(255,255,255,0.4)}
   .staleness-dot{width:8px;height:8px;border-radius:50%;display:inline-block;opacity:0.8}
   .match-info{font-size:11px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px}
-  .match-tag{padding:2px 6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:4px;color:var(--tag-text);font-size:10px;cursor:pointer;transition:all 0.2s}
+  .match-tag{padding:3px 8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:4px;color:var(--tag-text);font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
   .match-tag:hover{background:rgba(139,92,246,0.25)}
-  .page-tag{background:rgba(167,139,250,0.08);border-color:rgba(167,139,250,0.2)}
   .no-results{padding:40px 0;text-align:center;color:var(--text-muted);font-size:13px}
   .empty{padding:80px 24px;text-align:center}
   .empty-icon{font-size:40px;margin-bottom:16px;opacity:0.3}
@@ -125,65 +124,77 @@ function render() {
 
   const modules = [...new Set(state.files.map(f=>f.module))].sort();
   const projects = [...new Set(state.files.map(f=>f.projectName).filter(Boolean))].sort();
-  const filtered = getFiltered();
 
   let h = '<div class="filters">';
-  h += '<div class="search-wrap"><span class="search-icon">🔍</span><input id="searchInput" type="text" placeholder="Search files, pages, frames…  ⌘K" value="'+(state.search||"")+'" oninput="state.search=this.value;render()"></div>';
-  h += '<select onchange="state.moduleFilter=this.value;render()"><option value="All">All Modules</option>';
+  h += '<div class="search-wrap"><span class="search-icon">🔍</span><input id="searchInput" type="text" placeholder="Search files, pages, frames…  ⌘K" value="'+(state.search||"")+'" oninput="state.search=this.value;renderList()"></div>';
+  h += '<select id="moduleSelect" onchange="state.moduleFilter=this.value;renderList()"><option value="All">All Modules</option>';
   for (const m of modules) h += '<option value="'+m+'"'+(state.moduleFilter===m?' selected':'')+'>'+m+'</option>';
   h += '</select>';
-  h += '<select onchange="state.projectFilter=this.value;render()"><option value="All">All Projects</option>';
+  h += '<select id="projectSelect" onchange="state.projectFilter=this.value;renderList()"><option value="All">All Projects</option>';
   for (const p of projects) h += '<option value="'+p.replace(/"/g,'&quot;')+'"'+(state.projectFilter===p?' selected':'')+'>'+p+'</option>';
   h += '</select>';
-  h += '<select onchange="var v=this.value.split(\'-\');state.sortBy=v[0];state.sortDir=v[1];render()">';
+  h += '<select id="sortSelect" onchange="var v=this.value.split(\'-\');state.sortBy=v[0];state.sortDir=v[1];renderList()">';
   for (const [val,label] of [["lastModified-desc","Latest first"],["lastModified-asc","Oldest first"],["name-asc","Name A→Z"],["name-desc","Name Z→A"],["module-asc","Module A→Z"]]) {
     h += '<option value="'+val+'"'+(state.sortBy+'-'+state.sortDir===val?' selected':'')+'>'+label+'</option>';
   }
   h += '</select></div>';
 
-  h += '<div class="stats"><span>'+filtered.length+' of '+state.files.length+' files</span><span><span class="dot" style="background:var(--fresh)"></span>Fresh (&lt;30d)</span><span><span class="dot" style="background:var(--recent)"></span>Recent (1-3mo)</span><span><span class="dot" style="background:var(--aging)"></span>Aging (3-6mo)</span><span><span class="dot" style="background:var(--stale)"></span>Stale (6mo+)</span></div>';
+  h += '<div class="stats"><span id="filterCount"></span><span><span class="dot" style="background:var(--fresh)"></span>Fresh (&lt;30d)</span><span><span class="dot" style="background:var(--recent)"></span>Recent (1-3mo)</span><span><span class="dot" style="background:var(--aging)"></span>Aging (3-6mo)</span><span><span class="dot" style="background:var(--stale)"></span>Stale (6mo+)</span></div>';
 
-  h += '<div class="file-list">';
-  if (filtered.length === 0) { h += '<div class="no-results">No files match.</div>'; }
-  else {
-    const q = state.search.toLowerCase();
-    for (const f of filtered) {
-      const s = staleness(f.lastModified);
-      const esc = t => (t||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-      const cleanLink = (f.link || "").split("?")[0];
-
-      let matchInfo = '';
-      if (q && q.length > 1 && f.frames) {
-        const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q));
-        if (matched.length > 0) {
-          matchInfo = '<div class="match-info">';
-          for (let i = 0; i < Math.min(5, matched.length); i++) {
-            const fr = matched[i];
-            const pageId = fr.pageId ? fr.pageId.replace(/-/g, '%3A') : '';
-            const frameId = fr.id ? fr.id.replace(/-/g, '%3A') : '';
-            matchInfo += '<span class="match-tag" onclick="openFrame(\''+f.id+'\',\''+pageId+'\',\''+frameId+'\'); return false" title="Open in Figma">🖼 '+esc(fr.name)+'</span>';
-          }
-          if (matched.length > 5) matchInfo += '<span style="font-size:10px;color:var(--text-muted)">+'+(matched.length-5)+' more</span>';
-          matchInfo += '</div>';
-        }
-      }
-
-      h += '<div class="file-row">';
-      h += '<div style="min-width:0"><a href="'+esc(cleanLink)+'" target="_blank" rel="noopener" class="file-name">'+esc(f.name)+'</a><div class="file-project">'+esc(f.projectName)+'</div>'+matchInfo+'</div>';
-      h += '<div style="padding-top:2px"><span class="tag">'+(f.module||"Other")+'</span></div>';
-      h += '<div class="time">'+timeAgo(f.lastModified)+'</div>';
-      h += '<div style="display:flex;justify-content:flex-end;padding-top:4px"><span class="staleness-dot" style="background:'+STALE_COLORS[s]+'"></span></div>';
-      h += '</div>';
-    }
-  }
-  h += '</div>';
+  h += '<div class="file-list" id="fileList"></div>';
 
   document.getElementById("mainContent").innerHTML = h;
   document.getElementById("metaInfo").textContent = state.files.length + " files";
   
+  renderList();
+  
   document.addEventListener("keydown", e => {
     if ((e.metaKey||e.ctrlKey) && e.key === "k") { e.preventDefault(); document.getElementById("searchInput")?.focus(); }
   });
+}
+
+function renderList() {
+  const filtered = getFiltered();
+  const el = document.getElementById("fileList");
+  const statsEl = document.getElementById("filterCount");
+  
+  if (!el) return;
+  
+  if (statsEl) statsEl.textContent = filtered.length + ' of ' + state.files.length + ' files';
+  
+  if (filtered.length === 0) { el.innerHTML = '<div class="no-results">No files match.</div>'; return; }
+
+  const q = state.search.toLowerCase();
+  let h = '';
+  for (const f of filtered) {
+    const s = staleness(f.lastModified);
+    const esc = t => (t||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    const cleanLink = (f.link || "").split("?")[0];
+
+    let matchInfo = '';
+    if (q && q.length > 1 && f.frames) {
+      const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q));
+      if (matched.length > 0) {
+        matchInfo = '<div class="match-info" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px">';
+        for (let i = 0; i < Math.min(8, matched.length); i++) {
+          const fr = matched[i];
+          const pageId = fr.pageId ? fr.pageId.replace(/-/g, '%3A') : '';
+          const frameId = fr.id ? fr.id.replace(/-/g, '%3A') : '';
+          matchInfo += '<span class="match-tag" style="padding:3px 8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:4px;color:var(--tag-text);font-size:11px;cursor:pointer;white-space:nowrap" onclick="openFrame(\''+f.id+'\',\''+pageId+'\',\''+frameId+'\'); return false" title="Click to open in Figma">🖼 '+esc(fr.name)+'</span>';
+        }
+        if (matched.length > 8) matchInfo += '<span style="font-size:10px;color:var(--text-muted)">+'+(matched.length-8)+' more</span>';
+        matchInfo += '</div>';
+      }
+    }
+
+    h += '<div class="file-row">';
+    h += '<div style="min-width:0"><a href="'+esc(cleanLink)+'" target="_blank" rel="noopener" class="file-name">'+esc(f.name)+'</a><div class="file-project">'+esc(f.projectName)+'</div>'+matchInfo+'</div>';
+    h += '<div style="padding-top:2px"><span class="tag">'+(f.module||"Other")+'</span></div>';
+    h += '<div class="time">'+timeAgo(f.lastModified)+'</div>';
+    h += '<div style="display:flex;justify-content:flex-end;padding-top:4px"><span class="staleness-dot" style="background:'+STALE_COLORS[s]+'"></span></div>';
+    h += '</div>';
+  }
+  el.innerHTML = h;
 }
 
 loadData();
