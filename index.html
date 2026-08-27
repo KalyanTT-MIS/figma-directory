@@ -95,7 +95,8 @@ function staleness(d) {
 }
 
 function openFrame(fileId, pageId, frameId) {
-  const link = "https://www.figma.com/design/" + fileId + "?node-id=" + pageId + "%3A" + frameId;
+  // Figma URL format: ?node-id=PAGE_ID:FRAME_ID (colon separator, not encoded)
+  const link = "https://www.figma.com/design/" + fileId + "?node-id=" + pageId + ":" + frameId;
   window.open(link, "_blank");
 }
 
@@ -178,8 +179,8 @@ function renderList() {
         matchInfo = '<div class="match-info" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px">';
         for (let i = 0; i < Math.min(8, matched.length); i++) {
           const fr = matched[i];
-          const pageId = fr.pageId ? fr.pageId.replace(/-/g, '%3A') : '';
-          const frameId = fr.id ? fr.id.replace(/-/g, '%3A') : '';
+          const pageId = fr.pageId || '';
+          const frameId = fr.id || '';
           matchInfo += '<span class="match-tag" style="padding:3px 8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:4px;color:var(--tag-text);font-size:11px;cursor:pointer;white-space:nowrap" onclick="openFrame(\''+f.id+'\',\''+pageId+'\',\''+frameId+'\'); return false" title="Click to open in Figma">🖼 '+esc(fr.name)+'</span>';
         }
         if (matched.length > 8) matchInfo += '<span style="font-size:10px;color:var(--text-muted)">+'+(matched.length-8)+' more</span>';
