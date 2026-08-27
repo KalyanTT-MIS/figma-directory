@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figma Directory Indexer</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.02);--text:#e4e4e7;--text-dim:rgba(255,255,255,0.35);--accent:#a78bfa;--accent-dim:rgba(139,92,246,0.2);--accent-border:rgba(139,92,246,0.15);--tag-bg:rgba(139,92,246,0.1);--tag-text:#c4b5fd;--fresh:#10b981;--recent:#60a5fa;--aging:#f59e0b;--stale:#ef4444}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .header{border-bottom:1px solid rgba(255,255,255,0.06);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .header-left{display:flex;align-items:center;gap:10px}
+  .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#a78bfa,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff}
+  .header h1{font-size:18px;font-weight:600;letter-spacing:-0.02em}
+  .header .org{font-size:12px;color:var(--text-dim)}
+  .btn{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+  .btn:hover{background:rgba(139,92,246,0.3)}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+  .btn-sm{padding:6px 12px;font-size:12px}
+  .btn-green{background:rgba(16,185,129,0.15);color:#6ee7b7;border-color:rgba(16,185,129,0.25)}
+  .btn-green:hover{background:rgba(16,185,129,0.25)}
+  .btn-danger{background:rgba(239,68,68,0.12);color:#fca5a5;border-color:rgba(239,68,68,0.2)}
+  .btn-danger:hover{background:rgba(239,68,68,0.22)}
+  .section{margin:20px 24px;background:rgba(139,92,246,0.04);border:1px solid var(--accent-border);border-radius:12px;padding:20px}
+  .section h3{font-size:14px;font-weight:600;color:var(--tag-text);margin-bottom:8px}
+  .section p{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
+  .token-row{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+  .token-row input{flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace;outline:none}
+  .token-row input:focus{border-color:rgba(139,92,246,0.3)}
+  textarea{width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical;outline:none;min-height:100px}
+  textarea:focus{border-color:rgba(139,92,246,0.3)}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .msg{font-size:12px;margin-left:8px}
+  .progress-bar{margin:12px 0;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#6d28d9);border-radius:2px;transition:width 0.3s}
+  .progress-text{font-size:12px;color:var(--accent);margin-bottom:4px}
+  .stats{font-size:12px;color:var(--text-dim);margin-top:12px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">F</div>
+    <h1>Figma Directory Indexer</h1>
+    <span class="org">Setup Tool</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>1. API Token</h3>
+  <p>Generate in Figma → Settings → Personal access tokens. Grant File content & Folders read, Resources → All files.</p>
+  <div class="token-row">
+    <input type="password" id="tokenInput" placeholder="figd_..." />
+    <button class="btn btn-sm" onclick="saveToken()">Save</button>
+    <span id="tokenStatus" style="font-size:11px;color:var(--text-dim)"></span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Paste Figma File URLs</h3>
+  <p>Right-click files in Figma → Copy link. One per line. The tool indexes all pages, frames, and generates node IDs for deep linking.</p>
+  <textarea id="urlInput" placeholder="https://www.figma.com/design/abc123/My-File&#10;https://www.figma.com/design/def456/Another-File"></textarea>
+  <div id="progressArea"></div>
+  <div class="actions">
+    <button class="btn btn-green" onclick="processUrls()">Index Files</button>
+    <button class="btn btn-sm btn-danger" onclick="clearAllData()">Clear All</button>
+    <span class="msg" id="indexMsg"></span>
+  </div>
+  <div class="stats" id="statsArea"></div>
+</div>
+
+<div class="section">
+  <h3>3. Export for Hosting</h3>
+  <p>Once indexed, export the JSON file. Host it with the viewer on GitHub Pages. Team members search without needing Figma or tokens.</p>
+  <div class="actions">
+    <button class="btn btn-green" id="exportBtn" onclick="exportData()" disabled>📥 Export as JSON</button>
+    <span class="msg" id="exportMsg"></span>
+  </div>
+  <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">After exporting, follow the GitHub Pages setup guide below.</p>
+</div>
+
+<div class="section">
+  <h3>4. GitHub Pages Setup (Free Hosting)</h3>
+  <p style="margin-bottom:12px"><strong style="color:var(--text)">Steps:</strong></p>
+  <ol style="margin-left:20px;font-size:12px;color:var(--text-dim);line-height:1.8">
+    <li>Create a GitHub repo called <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">figma-directory</code></li>
+    <li>Clone it locally: <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">git clone github.com/yourname/figma-directory</code></li>
+    <li>Download the <strong>viewer.html</strong> and your exported JSON file, save them in the repo folder</li>
+    <li>Push to GitHub: <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">git add . && git commit -m "Initial" && git push</code></li>
+    <li>Go to repo Settings → Pages → Source: main branch. Save.</li>
+    <li>Your directory is live at <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">yourname.github.io/figma-directory</code></li>
+    <li><strong style="color:var(--text)">To update:</strong> Re-index files here, export new JSON, replace the file in your repo, push. Done.</li>
+  </ol>
+</div>
+
+<script>
+const STORAGE_FILES = "figdir-files";
+const STORAGE_TOKEN = "figdir-token";
+
+let state = { files: [], token: "" };
+
+try { state.files = JSON.parse(localStorage.getItem(STORAGE_FILES)) || []; } catch {}
+state.token = localStorage.getItem(STORAGE_TOKEN) || "";
+
+const MODULE_MAP = [
+  {kw:["desk","booking","hot desk","hotdesk"],m:"Desk Booking"},
+  {kw:["meeting","room","conference"],m:"Meeting Rooms"},
+  {kw:["visitor","vms","guest"],m:"Visitor Management"},
+  {kw:["parking","vehicle","car"],m:"Parking"},
+  {kw:["transport","shuttle","cab","ride","trip","route","driver"],m:"Transport"},
+  {kw:["attendance","checkin","check-in"],m:"Attendance"},
+  {kw:["cafeteria","food","meal","canteen"],m:"Cafeteria"},
+  {kw:["admin","dashboard","analytics","report"],m:"Admin & Analytics"},
+  {kw:["employee","profile","onboard","directory","leave","disclosure"],m:"Employee"},
+  {kw:["ticket","helpdesk","support","issue"],m:"Ticketing"},
+  {kw:["premises","facility","building","floor","space"],m:"Premises"},
+  {kw:["planner","work plan","schedule","hybrid","roster"],m:"Work Planner"},
+  {kw:["notification","alert","bell"],m:"Notifications"},
+  {kw:["auth","login","sso","sign","otp","password"],m:"Authentication"},
+  {kw:["design system","component","library","token","crystal","cds"],m:"Design System"},
+  {kw:["mobile","app","ios","android"],m:"Mobile App"},
+  {kw:["web","portal","website","landing"],m:"Web Portal"},
+  {kw:["kiosk"],m:"Kiosk"},
+  {kw:["navigation","sidebar","nav","menu","header"],m:"Navigation"},
+  {kw:["settings","config","preference"],m:"Settings"},
+  {kw:["integration","api","webhook","slack"],m:"Integrations"},
+  {kw:["prototype","proto"],m:"Prototypes"},
+  {kw:["stratus"],m:"Stratus"},
+  {kw:["hiring","recruit"],m:"Hiring"},
+  {kw:["experiment"],m:"Experiments"},
+];
+
+function inferModule(name, proj) {
+  const c = ((name||"") + " " + (proj||"")).toLowerCase();
+  for (const {kw, m} of MODULE_MAP) { if (kw.some(k => c.includes(k))) return m; }
+  return "Other";
+}
+
+function extractFileKeys(text) {
+  const keys = [];
+  for (const line of text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean)) {
+    const m = line.match(/figma\.com\/(design|file|board|proto|slides)\/([a-zA-Z0-9]{15,})/);
+    if (m) keys.push({ key: m[2], type: m[1], originalUrl: line });
+  }
+  return keys;
+}
+
+async function figmaGet(url) {
+  const res = await fetch(url, { headers: { "X-Figma-Token": state.token }});
+  if (!res.ok) throw new Error(res.status + " " + res.statusText);
+  return res.json();
+}
+
+function saveToken() {
+  state.token = (document.getElementById("tokenInput").value || "").trim();
+  localStorage.setItem(STORAGE_TOKEN, state.token);
+  document.getElementById("tokenStatus").textContent = state.token ? "✓ Saved" : "";
+  document.getElementById("tokenStatus").style.color = "#6ee7b7";
+}
+
+function collectFrameNodes(node, frames, pageId) {
+  if (!node) return;
+  if (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "COMPONENT_SET" || node.type === "SECTION") {
+    frames.push({ name: node.name, id: node.id, pageId: pageId });
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      collectFrameNodes(child, frames, pageId);
+    }
+  }
+}
+
+async function processUrls() {
+  const urlText = document.getElementById("urlInput").value;
+  const msgEl = document.getElementById("indexMsg");
+
+  if (!state.token) { msgEl.textContent = "Save token first."; msgEl.style.color = "#fca5a5"; return; }
+
+  const entries = extractFileKeys(urlText);
+  if (entries.length === 0) { msgEl.textContent = "No Figma URLs found."; msgEl.style.color = "#fca5a5"; return; }
+
+  const existingKeys = new Set(state.files.map(f => f.id));
+  const newEntries = entries.filter(e => !existingKeys.has(e.key));
+
+  if (newEntries.length === 0) {
+    msgEl.textContent = "All " + entries.length + " files already indexed.";
+    msgEl.style.color = "#60a5fa";
+    return;
+  }
+
+  msgEl.textContent = "";
+  let added = 0, failed = 0;
+
+  document.getElementById("progressArea").innerHTML = '<div class="progress-text" id="progressText">Starting…</div><div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>';
+
+  for (let i = 0; i < newEntries.length; i++) {
+    const entry = newEntries[i];
+    const pct = Math.round(((i + 1) / newEntries.length) * 100);
+    document.getElementById("progressText").textContent = "Indexing " + (i+1) + "/" + newEntries.length + "…";
+    document.getElementById("progressFill").style.width = pct + "%";
+
+    try {
+      const data = await figmaGet("https://api.figma.com/v1/files/" + entry.key + "?depth=2");
+      const name = data.name || "Untitled";
+      const lastMod = data.lastModified || data.last_modified || "";
+      const proj = "Untagged";
+
+      const pagesData = [];
+      const allFrames = [];
+      if (data.document && data.document.children) {
+        for (const page of data.document.children) {
+          const frames = [];
+          collectFrameNodes(page, frames, page.id);
+          allFrames.push(...frames);
+          pagesData.push({ name: page.name, id: page.id, frames: frames });
+        }
+      }
+
+      state.files.push({
+        id: entry.key,
+        name: name,
+        projectName: proj,
+        lastModified: lastMod,
+        link: entry.originalUrl || ("https://www.figma.com/" + entry.type + "/" + entry.key),
+        module: inferModule(name, proj),
+        pages: pagesData.map(p => p.name),
+        pagesData: pagesData,
+        frames: allFrames,
+        searchText: [name, proj, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name)].join(" ").toLowerCase(),
+      });
+      added++;
+    } catch (e) {
+      console.warn("Failed:", entry.key, e.message);
+      failed++;
+    }
+
+    if (i < newEntries.length - 1) await new Promise(r => setTimeout(r, 300));
+  }
+
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+  document.getElementById("progressArea").innerHTML = "";
+  document.getElementById("urlInput").value = "";
+  msgEl.textContent = "Added " + added + " files" + (failed > 0 ? " (" + failed + " failed)" : "") + ". Total: " + state.files.length;
+  msgEl.style.color = "#6ee7b7";
+  document.getElementById("exportBtn").disabled = state.files.length === 0;
+  updateStats();
+}
+
+function clearAllData() {
+  if (!confirm("Delete all indexed files?")) return;
+  state.files = [];
+  localStorage.removeItem(STORAGE_FILES);
+  document.getElementById("indexMsg").textContent = "Cleared.";
+  document.getElementById("indexMsg").style.color = "#6ee7b7";
+  document.getElementById("exportBtn").disabled = true;
+  updateStats();
+}
+
+function updateStats() {
+  const s = document.getElementById("statsArea");
+  if (state.files.length === 0) { s.textContent = ""; return; }
+  const totalPages = state.files.reduce((acc, f) => acc + (f.pagesData ? f.pagesData.length : 0), 0);
+  const totalFrames = state.files.reduce((acc, f) => acc + (f.frames ? f.frames.length : 0), 0);
+  s.innerHTML = '<strong style="color:var(--text)">Indexed:</strong> ' + state.files.length + ' files, ' + totalPages + ' pages, ' + totalFrames + ' frames';
+}
+
+function exportData() {
+  if (state.files.length === 0) return;
+  const json = JSON.stringify(state.files, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "figma-directory-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById("exportMsg").textContent = "✓ Downloaded. Upload to your GitHub repo.";
+  document.getElementById("exportMsg").style.color = "#6ee7b7";
+}
+
+document.getElementById("tokenInput").value = state.token;
+if (state.token) document.getElementById("tokenStatus").textContent = "✓ Saved";
+updateStats();
+</script>
+</body>
+</html>
