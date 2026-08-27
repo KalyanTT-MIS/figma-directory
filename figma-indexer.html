@@ -29,12 +29,23 @@
   .token-row input:focus{border-color:rgba(139,92,246,0.3)}
   textarea{width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical;outline:none;min-height:100px}
   textarea:focus{border-color:rgba(139,92,246,0.3)}
+  select{width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;outline:none;margin-bottom:12px}
+  select:focus{border-color:rgba(139,92,246,0.3)}
+  .tag-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
   .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
   .msg{font-size:12px;margin-left:8px}
   .progress-bar{margin:12px 0;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
   .progress-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#6d28d9);border-radius:2px;transition:width 0.3s}
   .progress-text{font-size:12px;color:var(--accent);margin-bottom:4px}
   .stats{font-size:12px;color:var(--text-dim);margin-top:12px;line-height:1.6}
+  .files-list{margin-top:12px;max-height:300px;overflow-y:auto;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px}
+  .file-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px}
+  .file-item:last-child{border-bottom:none}
+  .file-info{flex:1;min-width:0}
+  .file-name{color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-meta{color:var(--text-dim);font-size:11px}
+  .file-actions{display:flex;gap:6px}
+  #editModal{display:none}
 </style>
 </head>
 <body>
@@ -60,6 +71,44 @@
 <div class="section">
   <h3>2. Paste Figma File URLs</h3>
   <p>Right-click files in Figma → Copy link. One per line. The tool indexes all pages, frames, and generates node IDs for deep linking.</p>
+  <div class="tag-row">
+    <div>
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px">Module (optional)</label>
+      <select id="moduleSelect">
+        <option value="">Auto-detect</option>
+        <option value="Desk Booking">Desk Booking</option>
+        <option value="Meeting Rooms">Meeting Rooms</option>
+        <option value="Visitor Management">Visitor Management</option>
+        <option value="Parking">Parking</option>
+        <option value="Transport">Transport</option>
+        <option value="Attendance">Attendance</option>
+        <option value="Cafeteria">Cafeteria</option>
+        <option value="Admin & Analytics">Admin & Analytics</option>
+        <option value="Employee">Employee</option>
+        <option value="Ticketing">Ticketing</option>
+        <option value="Premises">Premises</option>
+        <option value="Work Planner">Work Planner</option>
+        <option value="Notifications">Notifications</option>
+        <option value="Authentication">Authentication</option>
+        <option value="Design System">Design System</option>
+        <option value="Mobile App">Mobile App</option>
+        <option value="Web Portal">Web Portal</option>
+        <option value="Kiosk">Kiosk</option>
+        <option value="Navigation">Navigation</option>
+        <option value="Settings">Settings</option>
+        <option value="Integrations">Integrations</option>
+        <option value="Prototypes">Prototypes</option>
+        <option value="Stratus">Stratus</option>
+        <option value="Hiring">Hiring</option>
+        <option value="Experiments">Experiments</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px">Project (optional)</label>
+      <input type="text" id="projectInput" placeholder="e.g. WIS - Employee Experience" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;outline:none" />
+    </div>
+  </div>
   <textarea id="urlInput" placeholder="https://www.figma.com/design/abc123/My-File&#10;https://www.figma.com/design/def456/Another-File"></textarea>
   <div id="progressArea"></div>
   <div class="actions">
@@ -71,27 +120,64 @@
 </div>
 
 <div class="section">
-  <h3>3. Export for Hosting</h3>
-  <p>Once indexed, export the JSON file. Host it with the viewer on GitHub Pages. Team members search without needing Figma or tokens.</p>
+  <h3>3.5 Indexed Files</h3>
+  <p>Currently indexed: <strong id="fileCount">0</strong> files</p>
+  <div id="filesList" class="files-list"></div>
+</div>
+
+<div class="section">
+  <h3>4. Export for Hosting</h3>
+  <p>Once indexed, export the JSON file. Upload to GitHub Pages so your team can search.</p>
   <div class="actions">
     <button class="btn btn-green" id="exportBtn" onclick="exportData()" disabled>📥 Export as JSON</button>
     <span class="msg" id="exportMsg"></span>
   </div>
-  <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">After exporting, follow the GitHub Pages setup guide below.</p>
 </div>
 
-<div class="section">
-  <h3>4. GitHub Pages Setup (Free Hosting)</h3>
-  <p style="margin-bottom:12px"><strong style="color:var(--text)">Steps:</strong></p>
-  <ol style="margin-left:20px;font-size:12px;color:var(--text-dim);line-height:1.8">
-    <li>Create a GitHub repo called <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">figma-directory</code></li>
-    <li>Clone it locally: <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">git clone github.com/yourname/figma-directory</code></li>
-    <li>Download the <strong>viewer.html</strong> and your exported JSON file, save them in the repo folder</li>
-    <li>Push to GitHub: <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">git add . && git commit -m "Initial" && git push</code></li>
-    <li>Go to repo Settings → Pages → Source: main branch. Save.</li>
-    <li>Your directory is live at <code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px">yourname.github.io/figma-directory</code></li>
-    <li><strong style="color:var(--text)">To update:</strong> Re-index files here, export new JSON, replace the file in your repo, push. Done.</li>
-  </ol>
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000">
+  <div style="background:var(--bg);border:1px solid var(--accent-border);border-radius:12px;padding:24px;max-width:400px;width:90%">
+    <h2 style="font-size:16px;margin-bottom:16px">Edit File Tags</h2>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px">Module</label>
+      <select id="editModuleSelect" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;">
+        <option value="">Auto-detect</option>
+        <option value="Desk Booking">Desk Booking</option>
+        <option value="Meeting Rooms">Meeting Rooms</option>
+        <option value="Visitor Management">Visitor Management</option>
+        <option value="Parking">Parking</option>
+        <option value="Transport">Transport</option>
+        <option value="Attendance">Attendance</option>
+        <option value="Cafeteria">Cafeteria</option>
+        <option value="Admin & Analytics">Admin & Analytics</option>
+        <option value="Employee">Employee</option>
+        <option value="Ticketing">Ticketing</option>
+        <option value="Premises">Premises</option>
+        <option value="Work Planner">Work Planner</option>
+        <option value="Notifications">Notifications</option>
+        <option value="Authentication">Authentication</option>
+        <option value="Design System">Design System</option>
+        <option value="Mobile App">Mobile App</option>
+        <option value="Web Portal">Web Portal</option>
+        <option value="Kiosk">Kiosk</option>
+        <option value="Navigation">Navigation</option>
+        <option value="Settings">Settings</option>
+        <option value="Integrations">Integrations</option>
+        <option value="Prototypes">Prototypes</option>
+        <option value="Stratus">Stratus</option>
+        <option value="Hiring">Hiring</option>
+        <option value="Experiments">Experiments</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px">Project</label>
+      <input type="text" id="editProjectInput" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;" />
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-sm btn-green" onclick="saveEditFile()">Save</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -171,8 +257,23 @@ function collectFrameNodes(node, frames, pageId) {
   }
 }
 
+function extractTextFromNode(node, texts = []) {
+  if (!node) return texts;
+  if (node.type === "TEXT" && node.characters) {
+    texts.push(node.characters.toLowerCase());
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      extractTextFromNode(child, texts);
+    }
+  }
+  return texts;
+}
+
 async function processUrls() {
   const urlText = document.getElementById("urlInput").value;
+  const manualModule = document.getElementById("moduleSelect").value || "";
+  const manualProject = document.getElementById("projectInput").value.trim() || "";
   const msgEl = document.getElementById("indexMsg");
 
   if (!state.token) { msgEl.textContent = "Save token first."; msgEl.style.color = "#fca5a5"; return; }
@@ -204,15 +305,22 @@ async function processUrls() {
       const data = await figmaGet("https://api.figma.com/v1/files/" + entry.key + "?depth=2");
       const name = data.name || "Untitled";
       const lastMod = data.lastModified || data.last_modified || "";
-      const proj = "Untagged";
+      
+      const proj = manualProject || "Untagged";
+      const mod = manualModule || inferModule(name, proj);
 
       const pagesData = [];
       const allFrames = [];
+      const allTexts = [];
       if (data.document && data.document.children) {
         for (const page of data.document.children) {
           const frames = [];
           collectFrameNodes(page, frames, page.id);
           allFrames.push(...frames);
+          
+          const pageTexts = extractTextFromNode(page);
+          allTexts.push(...pageTexts);
+          
           pagesData.push({ name: page.name, id: page.id, frames: frames });
         }
       }
@@ -223,11 +331,11 @@ async function processUrls() {
         projectName: proj,
         lastModified: lastMod,
         link: entry.originalUrl || ("https://www.figma.com/" + entry.type + "/" + entry.key),
-        module: inferModule(name, proj),
+        module: mod,
         pages: pagesData.map(p => p.name),
         pagesData: pagesData,
         frames: allFrames,
-        searchText: [name, proj, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name)].join(" ").toLowerCase(),
+        searchText: [name, proj, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allTexts].join(" ").toLowerCase(),
       });
       added++;
     } catch (e) {
@@ -245,6 +353,7 @@ async function processUrls() {
   msgEl.style.color = "#6ee7b7";
   document.getElementById("exportBtn").disabled = state.files.length === 0;
   updateStats();
+  renderFilesList();
 }
 
 function clearAllData() {
@@ -255,6 +364,7 @@ function clearAllData() {
   document.getElementById("indexMsg").style.color = "#6ee7b7";
   document.getElementById("exportBtn").disabled = true;
   updateStats();
+  renderFilesList();
 }
 
 function updateStats() {
@@ -263,6 +373,119 @@ function updateStats() {
   const totalPages = state.files.reduce((acc, f) => acc + (f.pagesData ? f.pagesData.length : 0), 0);
   const totalFrames = state.files.reduce((acc, f) => acc + (f.frames ? f.frames.length : 0), 0);
   s.innerHTML = '<strong style="color:var(--text)">Indexed:</strong> ' + state.files.length + ' files, ' + totalPages + ' pages, ' + totalFrames + ' frames';
+}
+
+function deleteFile(fileId) {
+  if (!confirm("Delete this file?")) return;
+  state.files = state.files.filter(f => f.id !== fileId);
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+  renderFilesList();
+  updateStats();
+  document.getElementById("exportBtn").disabled = state.files.length === 0;
+}
+
+async function updateFile(fileId) {
+  if (!confirm("Re-fetch this file from Figma?")) return;
+  if (!state.token) { alert("Save token first."); return; }
+
+  const fileIdx = state.files.findIndex(f => f.id === fileId);
+  if (fileIdx === -1) return;
+
+  const file = state.files[fileIdx];
+  const msgEl = document.getElementById("indexMsg");
+  msgEl.textContent = "Updating " + file.name + "…";
+  msgEl.style.color = "#60a5fa";
+
+  try {
+    const data = await figmaGet("https://api.figma.com/v1/files/" + fileId + "?depth=2");
+    const pagesData = [];
+    const allFrames = [];
+    const allTexts = [];
+    
+    if (data.document && data.document.children) {
+      for (const page of data.document.children) {
+        const frames = [];
+        collectFrameNodes(page, frames, page.id);
+        allFrames.push(...frames);
+        
+        const pageTexts = extractTextFromNode(page);
+        allTexts.push(...pageTexts);
+        
+        pagesData.push({ name: page.name, id: page.id, frames: frames });
+      }
+    }
+
+    state.files[fileIdx].lastModified = data.lastModified || data.last_modified || "";
+    state.files[fileIdx].pages = pagesData.map(p => p.name);
+    state.files[fileIdx].pagesData = pagesData;
+    state.files[fileIdx].frames = allFrames;
+    state.files[fileIdx].searchText = [state.files[fileIdx].name, state.files[fileIdx].projectName, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allTexts].join(" ").toLowerCase();
+
+    localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+    msgEl.textContent = "✓ Updated " + file.name;
+    msgEl.style.color = "#6ee7b7";
+    document.getElementById("exportBtn").disabled = state.files.length === 0;
+    renderFilesList();
+    updateStats();
+  } catch (e) {
+    msgEl.textContent = "Failed: " + e.message;
+    msgEl.style.color = "#fca5a5";
+  }
+}
+
+let editingFileId = null;
+
+function renderFilesList() {
+  const el = document.getElementById("filesList");
+  document.getElementById("fileCount").textContent = state.files.length;
+  
+  if (state.files.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px">No files indexed</div>';
+    return;
+  }
+  
+  let h = '';
+  for (const f of state.files) {
+    const frames = (f.frames || []).length;
+    h += '<div class="file-item">';
+    h += '<div class="file-info"><div class="file-name">'+f.name+'</div><div class="file-meta">'+frames+' frames • '+f.projectName+' • '+f.module+'</div></div>';
+    h += '<div class="file-actions"><button class="btn btn-sm" style="background:rgba(106,217,239,0.12);color:#22d3ee;border-color:rgba(106,217,239,0.2)" onclick="openEditModal(\''+f.id+'\')">✎</button><button class="btn btn-sm" style="background:rgba(96,165,250,0.12);color:#60a5fa;border-color:rgba(96,165,250,0.2)" onclick="updateFile(\''+f.id+'\')">⟳</button><button class="btn btn-sm btn-danger" onclick="deleteFile(\''+f.id+'\')">✕</button></div>';
+    h += '</div>';
+  }
+  el.innerHTML = h;
+}
+
+function openEditModal(fileId) {
+  const file = state.files.find(f => f.id === fileId);
+  if (!file) return;
+  editingFileId = fileId;
+  document.getElementById("editModuleSelect").value = file.module || "";
+  document.getElementById("editProjectInput").value = file.projectName || "";
+  document.getElementById("editModal").style.display = "flex";
+}
+
+function closeEditModal() {
+  document.getElementById("editModal").style.display = "none";
+  editingFileId = null;
+}
+
+function saveEditFile() {
+  if (!editingFileId) return;
+  const fileIdx = state.files.findIndex(f => f.id === editingFileId);
+  if (fileIdx === -1) return;
+  
+  const newModule = document.getElementById("editModuleSelect").value || state.files[fileIdx].module;
+  const newProject = document.getElementById("editProjectInput").value.trim() || state.files[fileIdx].projectName;
+  
+  state.files[fileIdx].module = newModule;
+  state.files[fileIdx].projectName = newProject;
+  
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+  renderFilesList();
+  closeEditModal();
+  
+  document.getElementById("indexMsg").textContent = "✓ Tags updated";
+  document.getElementById("indexMsg").style.color = "#6ee7b7";
 }
 
 function exportData() {
@@ -275,13 +498,18 @@ function exportData() {
   a.download = "figma-directory-data.json";
   a.click();
   URL.revokeObjectURL(url);
-  document.getElementById("exportMsg").textContent = "✓ Downloaded. Upload to your GitHub repo.";
+  document.getElementById("exportMsg").textContent = "✓ Downloaded";
   document.getElementById("exportMsg").style.color = "#6ee7b7";
 }
 
 document.getElementById("tokenInput").value = state.token;
 if (state.token) document.getElementById("tokenStatus").textContent = "✓ Saved";
 updateStats();
+renderFilesList();
+
+document.getElementById("editModal").addEventListener("click", e => {
+  if (e.target.id === "editModal") closeEditModal();
+});
 </script>
 </body>
 </html>
