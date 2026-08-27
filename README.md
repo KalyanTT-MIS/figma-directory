@@ -56,5 +56,5 @@ When you add new files or want to refresh:
 
 ## Questions?
 
-Contact: Kalyan
-Last updated: 27 Aug
+Contact: [Your name/team]
+Last updated: [Date]
