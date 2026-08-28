@@ -245,14 +245,15 @@ function saveToken() {
   document.getElementById("tokenStatus").style.color = "#6ee7b7";
 }
 
-function collectFrameNodes(node, frames, pageId) {
+function collectFrameNodesWithText(node, frames, pageId) {
   if (!node) return;
   if (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "COMPONENT_SET" || node.type === "SECTION") {
-    frames.push({ name: node.name, id: node.id, pageId: pageId });
+    const frameText = extractTextFromNode(node);
+    frames.push({ name: node.name, id: node.id, pageId: pageId, text: frameText });
   }
   if (node.children) {
     for (const child of node.children) {
-      collectFrameNodes(child, frames, pageId);
+      collectFrameNodesWithText(child, frames, pageId);
     }
   }
 }
@@ -302,7 +303,7 @@ async function processUrls() {
     document.getElementById("progressFill").style.width = pct + "%";
 
     try {
-      const data = await figmaGet("https://api.figma.com/v1/files/" + entry.key + "?depth=2");
+      const data = await figmaGet("https://api.figma.com/v1/files/" + entry.key + "?depth=5");
       const name = data.name || "Untitled";
       const lastMod = data.lastModified || data.last_modified || "";
       
@@ -311,17 +312,36 @@ async function processUrls() {
 
       const pagesData = [];
       const allFrames = [];
-      const allTexts = [];
+      const allSearchTexts = [];
+      
       if (data.document && data.document.children) {
         for (const page of data.document.children) {
           const frames = [];
-          collectFrameNodes(page, frames, page.id);
-          allFrames.push(...frames);
+          collectFrameNodesWithText(page, frames, page.id);
           
-          const pageTexts = extractTextFromNode(page);
-          allTexts.push(...pageTexts);
+          // Store clean frame data
+          const cleanFrames = frames.map(f => ({
+            name: f.name,
+            id: f.id,
+            pageId: f.pageId
+          }));
           
-          pagesData.push({ name: page.name, id: page.id, frames: frames });
+          allFrames.push(...cleanFrames);
+          
+          // Extract ALL text from frames and collect it
+          for (const frame of frames) {
+            if (frame.text && Array.isArray(frame.text)) {
+              for (const text of frame.text) {
+                const cleaned = (text || "").trim();
+                // Keep all meaningful text (not just 2-80 chars)
+                if (cleaned.length > 0 && cleaned.length < 200) {
+                  allSearchTexts.push(cleaned);
+                }
+              }
+            }
+          }
+          
+          pagesData.push({ name: page.name, id: page.id, frames: cleanFrames });
         }
       }
 
@@ -335,7 +355,8 @@ async function processUrls() {
         pages: pagesData.map(p => p.name),
         pagesData: pagesData,
         frames: allFrames,
-        searchText: [name, proj, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allTexts].join(" ").toLowerCase(),
+        // Include everything: file name, pages, frames, AND all extracted text
+        searchText: [name, proj, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allSearchTexts].join(" ").toLowerCase(),
       });
       added++;
     } catch (e) {
@@ -397,21 +418,38 @@ async function updateFile(fileId) {
   msgEl.style.color = "#60a5fa";
 
   try {
-    const data = await figmaGet("https://api.figma.com/v1/files/" + fileId + "?depth=2");
+    const data = await figmaGet("https://api.figma.com/v1/files/" + fileId + "?depth=5");
     const pagesData = [];
     const allFrames = [];
-    const allTexts = [];
+    const allSearchTexts = [];
     
     if (data.document && data.document.children) {
       for (const page of data.document.children) {
         const frames = [];
-        collectFrameNodes(page, frames, page.id);
-        allFrames.push(...frames);
+        collectFrameNodesWithText(page, frames, page.id);
         
-        const pageTexts = extractTextFromNode(page);
-        allTexts.push(...pageTexts);
+        // Store clean frame data
+        const cleanFrames = frames.map(f => ({
+          name: f.name,
+          id: f.id,
+          pageId: f.pageId
+        }));
         
-        pagesData.push({ name: page.name, id: page.id, frames: frames });
+        allFrames.push(...cleanFrames);
+        
+        // Extract ALL text from frames and collect it
+        for (const frame of frames) {
+          if (frame.text && Array.isArray(frame.text)) {
+            for (const text of frame.text) {
+              const cleaned = (text || "").trim();
+              if (cleaned.length > 0 && cleaned.length < 200) {
+                allSearchTexts.push(cleaned);
+              }
+            }
+          }
+        }
+        
+        pagesData.push({ name: page.name, id: page.id, frames: cleanFrames });
       }
     }
 
@@ -419,7 +457,7 @@ async function updateFile(fileId) {
     state.files[fileIdx].pages = pagesData.map(p => p.name);
     state.files[fileIdx].pagesData = pagesData;
     state.files[fileIdx].frames = allFrames;
-    state.files[fileIdx].searchText = [state.files[fileIdx].name, state.files[fileIdx].projectName, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allTexts].join(" ").toLowerCase();
+    state.files[fileIdx].searchText = [state.files[fileIdx].name, state.files[fileIdx].projectName, ...pagesData.map(p => p.name), ...allFrames.map(f => f.name), ...allSearchTexts].join(" ").toLowerCase();
 
     localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
     msgEl.textContent = "✓ Updated " + file.name;
