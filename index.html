@@ -179,7 +179,7 @@ function renderList() {
 
     let matchInfo = '';
     if (q && q.length > 1 && f.frames) {
-      const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q));
+      const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q) || (fr.text||"").includes(q));
       if (matched.length > 0) {
         matchInfo = '<div class="match-info" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px">';
         for (let i = 0; i < Math.min(8, matched.length); i++) {
