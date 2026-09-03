@@ -184,7 +184,14 @@ function renderList() {
 
     let matchInfo = '';
     if (q && q.length > 1 && f.frames) {
-      const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q));
+      // First, try to match by frame name
+      let matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q));
+      
+      // If no frames matched by name but the FILE matched, show some frames to explore
+      if (matched.length === 0 && (f.searchText||"").toLowerCase().includes(q)) {
+        matched = (f.frames||[]).slice(0, 8); // Show first 8 frames for exploring
+      }
+      
       if (matched.length > 0) {
         matchInfo = '<div class="match-info" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px">';
         for (let i = 0; i < Math.min(8, matched.length); i++) {
