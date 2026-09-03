@@ -66,7 +66,7 @@ let state = { files: [], search: "", moduleFilter: "All", projectFilter: "All", 
 
 async function loadData() {
   try {
-    const res = await fetch("https://kalyantt-mis.github.io/figma-directory/figma-directory-data.json");
+    const res = await fetch("https://github.com/KalyanTT-MIS/figma-directory/releases/download/v1/figma-directory-data.json");
     if (!res.ok) throw new Error("Data file not found");
     state.files = await res.json();
   } catch (e) {
