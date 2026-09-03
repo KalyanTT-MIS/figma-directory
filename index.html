@@ -66,11 +66,16 @@ let state = { files: [], search: "", moduleFilter: "All", projectFilter: "All", 
 
 async function loadData() {
   try {
-    const res = await fetch("https://github.com/KalyanTT-MIS/figma-directory/releases/download/v1/figma-directory-data.json");
-    if (!res.ok) throw new Error("Data file not found");
+    const url = "https://github.com/KalyanTT-MIS/figma-directory/releases/download/v1/figma-directory-data.json";
+    console.log("Fetching from:", url);
+    const res = await fetch(url);
+    console.log("Fetch response status:", res.status, res.statusText);
+    if (!res.ok) throw new Error("Data file not found (status: " + res.status + ")");
     state.files = await res.json();
+    console.log("Loaded", state.files.length, "files");
   } catch (e) {
-    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Make sure <code style="background:rgba(0,0,0,0.3);padding:2px 4px">figma-directory-data.json</code> is in the same folder as this file.</div></div>';
+    console.error("Load error:", e);
+    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Error: ' + e.message + '<br><br>Check console (F12) for details.</div></div>';
     return;
   }
   render();
