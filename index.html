@@ -3,234 +3,457 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Figma Directory</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<title>Figma Directory Indexer</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  :root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.02);--surface-hover:rgba(139,92,246,0.08);--border:rgba(255,255,255,0.06);--text:#e4e4e7;--text-dim:rgba(255,255,255,0.35);--text-muted:rgba(255,255,255,0.25);--accent:#a78bfa;--accent-dim:rgba(139,92,246,0.2);--accent-border:rgba(139,92,246,0.15);--tag-bg:rgba(139,92,246,0.1);--tag-text:#c4b5fd;--fresh:#10b981;--recent:#60a5fa;--aging:#f59e0b;--stale:#ef4444}
+  :root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.02);--text:#e4e4e7;--text-dim:rgba(255,255,255,0.35);--accent:#a78bfa;--accent-dim:rgba(139,92,246,0.2);--accent-border:rgba(139,92,246,0.15);--tag-bg:rgba(139,92,246,0.1);--tag-text:#c4b5fd}
   body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-  .header{border-bottom:1px solid var(--border);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  .header-left{display:flex;align-items:center;gap:10px}
-  .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#a78bfa,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff}
-  .header h1{font-size:18px;font-weight:600;letter-spacing:-0.02em}
-  .header .org{font-size:12px;color:var(--text-dim)}
-  .meta{font-size:11px;color:var(--text-muted)}
-  .filters{padding:16px 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .search-wrap{position:relative;flex:1 1 260px;min-width:200px}
-  .search-wrap input{width:100%;padding:9px 12px 9px 34px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-size:13px;outline:none}
-  .search-wrap input:focus{border-color:rgba(139,92,246,0.3)}
-  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0.3}
-  select{padding:9px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-size:12px;outline:none}
-  select option{background:#1a1a2e}
-  .stats{padding:0 24px 12px;display:flex;gap:16px;font-size:11px;color:var(--text-muted);flex-wrap:wrap}
-  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
-  .file-list{padding:0 24px 24px;display:flex;flex-direction:column;gap:2px}
-  .file-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 100px 50px;gap:12px;align-items:start;padding:12px 16px;background:var(--surface);border-radius:8px;transition:background 0.12s}
-  .file-row:hover{background:var(--surface-hover)}
-  .file-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f4f4f5;cursor:pointer;text-decoration:none}
-  .file-name:hover{color:var(--accent)}
-  .file-project{font-size:11px;color:var(--text-muted);margin-top:2px}
-  .tag{display:inline-block;padding:3px 8px;background:var(--tag-bg);border:1px solid var(--accent-border);border-radius:5px;font-size:11px;color:var(--tag-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .time{font-size:12px;color:rgba(255,255,255,0.4)}
-  .staleness-dot{width:8px;height:8px;border-radius:50%;display:inline-block;opacity:0.8}
-  .match-info{font-size:11px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px}
-  .match-tag{padding:3px 8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:4px;color:var(--tag-text);font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
-  .match-tag:hover{background:rgba(139,92,246,0.25)}
-  .no-results{padding:40px 0;text-align:center;color:var(--text-muted);font-size:13px}
-  .empty{padding:80px 24px;text-align:center}
-  .empty-icon{font-size:40px;margin-bottom:16px;opacity:0.3}
-  @media(max-width:700px){
-    .file-row{grid-template-columns:minmax(0,1fr) auto}
-    .file-row>:nth-child(2),.file-row>:nth-child(4){display:none}
-  }
+  .header{border-bottom:1px solid rgba(255,255,255,0.06);padding:20px 24px}
+  .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#a78bfa,#6d28d9);display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;margin-right:10px}
+  .header h1{display:inline;font-size:18px;font-weight:600}
+  .section{margin:20px 24px;background:rgba(139,92,246,0.04);border:1px solid var(--accent-border);border-radius:12px;padding:20px}
+  .section h3{font-size:14px;font-weight:600;color:var(--tag-text);margin-bottom:8px}
+  .section p{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
+  .token-row{display:flex;gap:8px;margin-bottom:12px}
+  .token-row input{flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace;outline:none}
+  textarea{width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);font-size:12px;resize:vertical;outline:none;min-height:80px}
+  .btn{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+  .btn:hover{background:rgba(139,92,246,0.3)}
+  .btn-sm{padding:6px 12px;font-size:11px}
+  .btn-green{background:rgba(16,185,129,0.15);color:#6ee7b7;border-color:rgba(16,185,129,0.25)}
+  .btn-green:hover{background:rgba(16,185,129,0.25)}
+  .btn-danger{background:rgba(239,68,68,0.12);color:#fca5a5;border-color:rgba(239,68,68,0.2)}
+  .btn-danger:hover{background:rgba(239,68,68,0.22)}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .msg{font-size:12px;margin-left:8px;color:#6ee7b7}
+  .progress-bar{margin:12px 0;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#6d28d9);transition:width 0.3s}
+  .progress-text{font-size:12px;color:var(--accent);margin-bottom:4px}
+  .stats{font-size:12px;color:var(--text-dim);margin-top:12px}
+  .file-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px}
+  .file-item:last-child{border-bottom:none}
+  .file-info{flex:1;min-width:0}
+  .file-name{color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-meta{color:var(--text-dim);font-size:11px;margin-top:2px}
+  .file-actions{display:flex;gap:6px}
+  .files-list{max-height:400px;overflow-y:auto;border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-top:12px}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-left">
-    <div class="logo">F</div>
-    <h1>Figma Directory</h1>
-    <span class="org">MoveInSync</span>
-  </div>
-  <div class="header-right">
-    <span class="meta" id="metaInfo"></span>
+  <span class="logo">F</span>
+  <h1>Figma Directory Indexer</h1>
+</div>
+
+<div class="section">
+  <h3>1. API Token</h3>
+  <p>Generate in Figma → Settings → Personal access tokens. Grant File content, Folders read.</p>
+  <div class="token-row">
+    <input type="password" id="tokenInput" placeholder="figd_..." />
+    <button class="btn btn-sm" onclick="saveToken()">Save</button>
+    <span id="tokenStatus" style="font-size:11px"></span>
   </div>
 </div>
 
-<div id="mainContent"></div>
+<div class="section">
+  <h3>2. Index New Files (Optional)</h3>
+  <p>Paste Figma URLs to add new files. Leave blank to skip.</p>
+  <textarea id="urlInput" placeholder="https://www.figma.com/design/abc123/File-1&#10;https://www.figma.com/design/def456/File-2"></textarea>
+  <div id="progressArea"></div>
+  <div class="actions">
+    <button class="btn btn-green" onclick="processUrls()">Index Files</button>
+    <span class="msg" id="indexMsg"></span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3.5 Indexed Files</h3>
+  <p>Click ⟳ to refresh a file with latest text. Click ✕ to remove.</p>
+  <div id="filesList" class="files-list"></div>
+  <div class="stats" id="statsArea"></div>
+  <div class="actions" style="margin-top:16px">
+    <button class="btn btn-green" onclick="refreshAllFiles()">⟳ Refresh ALL 23 Files</button>
+    <span id="indexMsg"></span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. Export</h3>
+  <p>After updating files, click Export to download the JSON.</p>
+  <div class="actions">
+    <button class="btn btn-green" id="exportBtn" onclick="exportData()" disabled>📥 Export as JSON</button>
+  </div>
+</div>
 
 <script>
-const STALE_COLORS = {fresh:"#10b981",recent:"#60a5fa",aging:"#f59e0b",stale:"#ef4444"};
+const STORAGE_FILES = "figdir-files";
+const STORAGE_TOKEN = "figdir-token";
 
-let state = { files: [], search: "", moduleFilter: "All", projectFilter: "All", sortBy: "lastModified", sortDir: "desc" };
+let state = { files: [], token: "" };
+let fullData = {};
+// Make accessible from console - use getter so updates are reflected
+Object.defineProperty(window, 'fullData', { get: () => fullData });
 
-async function loadData() {
-  try {
-    const url = "https://kalyantt-mis.github.io/figma-directory/figma-directory-data.json.zip";
-    console.log("Fetching zip file from:", url);
-    const res = await fetch(url);
-    console.log("Fetch response status:", res.status);
-    if (!res.ok) throw new Error("Data file not found (status: " + res.status + ")");
-    
-    // Get the zip data as ArrayBuffer
-    const zipData = await res.arrayBuffer();
-    console.log("Downloaded zip size:", zipData.byteLength, "bytes");
-    
-    // Load and extract zip
-    const zip = new JSZip();
-    await zip.loadAsync(zipData);
-    
-    // Find and extract the JSON file
-    let jsonContent = null;
-    for (const [filename, file] of Object.entries(zip.files)) {
-      if (filename.endsWith('.json')) {
-        jsonContent = await file.async('text');
-        console.log("Extracted:", filename);
-        break;
+try { 
+  state.files = JSON.parse(localStorage.getItem(STORAGE_FILES)) || []; 
+} catch {}
+state.token = localStorage.getItem(STORAGE_TOKEN) || "";
+// fullData stays in memory only - don't save to localStorage (too big)
+
+function saveToken() {
+  state.token = document.getElementById("tokenInput").value.trim();
+  localStorage.setItem(STORAGE_TOKEN, state.token);
+  document.getElementById("tokenStatus").textContent = state.token ? "✓ Saved" : "";
+  document.getElementById("tokenStatus").style.color = "#6ee7b7";
+}
+
+function extractTextFromNode(node, texts = [], depth = 0) {
+  if (!node) return texts;
+  
+  // Extract TEXT node content (visible UI text like "Add exception")
+  if (node.type === "TEXT" && node.characters) {
+    const text = node.characters.trim();
+    if (text.length > 0 && text.length < 200) {
+      texts.push(text.toLowerCase());
+      if (text.includes("exception") || text.includes("add")) {
+        console.log("✓ TEXT FOUND at depth", depth, ":", text);
       }
     }
-    
-    if (!jsonContent) throw new Error("No JSON file found in zip");
-    
-    state.files = JSON.parse(jsonContent);
-    console.log("Loaded", state.files.length, "files");
-  } catch (e) {
-    console.error("Load error:", e);
-    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Error: ' + e.message + '<br><br>Make sure figma-directory-data.json.zip is in repo root.</div></div>';
-    return;
   }
-  render();
-}
-
-function timeAgo(d) {
-  if (!d) return "Unknown";
-  const dt = new Date(d);
-  if (isNaN(dt)) return d;
-  const days = Math.floor((Date.now() - dt) / 86400000);
-  if (days < 0) return "Future"; if (days === 0) return "Today"; if (days === 1) return "Yesterday";
-  if (days < 7) return days+"d ago"; if (days < 30) return Math.floor(days/7)+"w ago";
-  if (days < 365) return Math.floor(days/30)+"mo ago"; return Math.floor(days/365)+"y ago";
-}
-
-function staleness(d) {
-  if (!d) return "stale";
-  const dt = new Date(d);
-  if (isNaN(dt)) return "stale";
-  const days = Math.floor((Date.now() - dt) / 86400000);
-  if (days < 30) return "fresh"; if (days < 90) return "recent"; if (days < 180) return "aging"; return "stale";
-}
-
-function openFrame(fileId, pageId, frameId) {
-  // Figma URL format: ?node-id=FRAME_ID (frameId already contains the full node path)
-  if (!frameId) { 
-    alert("Frame information missing. Please re-index the file.");
-    return; 
+  
+  // Extract component and instance names
+  if (node.type === "COMPONENT" || node.type === "COMPONENT_INSTANCE" || node.type === "INSTANCE") {
+    const name = (node.name || "").trim();
+    if (name.length > 0 && name.length < 100) {
+      texts.push(name.toLowerCase());
+      if (name.toLowerCase().includes("exception") || name.toLowerCase().includes("add")) {
+        console.log("✓ COMPONENT FOUND at depth", depth, ":", name);
+      }
+    }
   }
-  const link = "https://www.figma.com/design/" + fileId + "?node-id=" + frameId;
-  console.log("Opening frame:", link);
-  window.open(link, "_blank");
-}
-
-function getFiltered() {
-  const q = state.search.toLowerCase();
-  return state.files.filter(f => {
-    const ms = !q || (f.searchText||"").toLowerCase().includes(q) || (f.module||"").toLowerCase().includes(q);
-    const mm = state.moduleFilter === "All" || f.module === state.moduleFilter;
-    const mp = state.projectFilter === "All" || f.projectName === state.projectFilter;
-    return ms && mm && mp;
-  }).sort((a,b) => {
-    let c = 0;
-    if (state.sortBy === "lastModified") c = new Date(a.lastModified||0) - new Date(b.lastModified||0);
-    else if (state.sortBy === "name") c = (a.name||"").localeCompare(b.name||"");
-    else if (state.sortBy === "project") c = (a.projectName||"").localeCompare(b.projectName||"");
-    else if (state.sortBy === "module") c = (a.module||"").localeCompare(b.module||"");
-    return state.sortDir === "desc" ? -c : c;
-  });
-}
-
-function render() {
-  if (state.files.length === 0) {
-    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div style="font-size:15px;color:rgba(255,255,255,0.5)">No files</div></div>';
-    return;
+  
+  if (node.children) {
+    for (const child of node.children) {
+      extractTextFromNode(child, texts, depth + 1);
+    }
   }
-
-  const modules = [...new Set(state.files.map(f=>f.module))].sort();
-  const projects = [...new Set(state.files.map(f=>f.projectName).filter(Boolean))].sort();
-
-  let h = '<div class="filters">';
-  h += '<div class="search-wrap"><span class="search-icon">🔍</span><input id="searchInput" type="text" placeholder="Search files, pages, frames…  ⌘K" value="'+(state.search||"")+'" oninput="state.search=this.value;renderList()"></div>';
-  h += '<select id="moduleSelect" onchange="state.moduleFilter=this.value;renderList()"><option value="All">All Modules</option>';
-  for (const m of modules) h += '<option value="'+m+'"'+(state.moduleFilter===m?' selected':'')+'>'+m+'</option>';
-  h += '</select>';
-  h += '<select id="projectSelect" onchange="state.projectFilter=this.value;renderList()"><option value="All">All Projects</option>';
-  for (const p of projects) h += '<option value="'+p.replace(/"/g,'&quot;')+'"'+(state.projectFilter===p?' selected':'')+'>'+p+'</option>';
-  h += '</select>';
-  h += '<select id="sortSelect" onchange="var v=this.value.split(\'-\');state.sortBy=v[0];state.sortDir=v[1];renderList()">';
-  for (const [val,label] of [["lastModified-desc","Latest first"],["lastModified-asc","Oldest first"],["name-asc","Name A→Z"],["name-desc","Name Z→A"],["module-asc","Module A→Z"]]) {
-    h += '<option value="'+val+'"'+(state.sortBy+'-'+state.sortDir===val?' selected':'')+'>'+label+'</option>';
-  }
-  h += '</select></div>';
-
-  h += '<div class="stats"><span id="filterCount"></span><span><span class="dot" style="background:var(--fresh)"></span>Fresh (&lt;30d)</span><span><span class="dot" style="background:var(--recent)"></span>Recent (1-3mo)</span><span><span class="dot" style="background:var(--aging)"></span>Aging (3-6mo)</span><span><span class="dot" style="background:var(--stale)"></span>Stale (6mo+)</span></div>';
-
-  h += '<div class="file-list" id="fileList"></div>';
-
-  document.getElementById("mainContent").innerHTML = h;
-  document.getElementById("metaInfo").textContent = state.files.length + " files";
-  
-  renderList();
-  
-  document.addEventListener("keydown", e => {
-    if ((e.metaKey||e.ctrlKey) && e.key === "k") { e.preventDefault(); document.getElementById("searchInput")?.focus(); }
-  });
+  return texts;
 }
 
-function renderList() {
-  const filtered = getFiltered();
-  const el = document.getElementById("fileList");
-  const statsEl = document.getElementById("filterCount");
-  
-  if (!el) return;
-  
-  if (statsEl) statsEl.textContent = filtered.length + ' of ' + state.files.length + ' files';
-  
-  if (filtered.length === 0) { el.innerHTML = '<div class="no-results">No files match.</div>'; return; }
+function collectFrameNodes(node, frames, pageId) {
+  if (!node) return;
+  if (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "COMPONENT_SET" || node.type === "SECTION") {
+    const text = extractTextFromNode(node);
+    frames.push({ name: node.name, id: node.id, pageId: pageId, text: text });
+    if (text.length > 0) {
+      console.log("Frame with text:", node.name, "text items:", text.length);
+    }
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      collectFrameNodes(child, frames, pageId);
+    }
+  }
+}
 
-  const q = state.search.toLowerCase();
-  let h = '';
-  for (const f of filtered) {
-    const s = staleness(f.lastModified);
-    const esc = t => (t||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-    const cleanLink = (f.link || "").split("?")[0];
+async function figmaGet(url) {
+  const res = await fetch(url, { headers: { "X-Figma-Token": state.token }});
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
 
-    let matchInfo = '';
-    if (q && q.length > 1 && f.frames) {
-      const matched = (f.frames||[]).filter(fr => fr.name.toLowerCase().includes(q) || (fr.text||"").includes(q));
-      if (matched.length > 0) {
-        matchInfo = '<div class="match-info" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px">';
-        for (let i = 0; i < Math.min(8, matched.length); i++) {
-          const fr = matched[i];
-          const pageId = fr.pageId || '';
-          const frameId = fr.id || '';
-          matchInfo += '<span class="match-tag" style="padding:3px 8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:4px;color:var(--tag-text);font-size:11px;cursor:pointer;white-space:nowrap" onclick="openFrame(\''+f.id+'\',\''+pageId+'\',\''+frameId+'\'); return false" title="Click to open in Figma">🖼 '+esc(fr.name)+'</span>';
+function extractFileKeys(text) {
+  const keys = [];
+  for (const line of text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean)) {
+    const m = line.match(/figma\.com\/(design|file)\/([a-zA-Z0-9]{15,})/);
+    if (m) keys.push({ key: m[2], type: m[1], url: line });
+  }
+  return keys;
+}
+
+async function processUrls() {
+  const urlText = document.getElementById("urlInput").value;
+  const msgEl = document.getElementById("indexMsg");
+
+  if (!state.token) { msgEl.textContent = "Save token first"; msgEl.style.color = "#fca5a5"; return; }
+
+  const entries = extractFileKeys(urlText);
+  if (entries.length === 0) { msgEl.textContent = "No URLs found"; msgEl.style.color = "#fca5a5"; return; }
+
+  const existingKeys = new Set(state.files.map(f => f.id));
+  const newEntries = entries.filter(e => !existingKeys.has(e.key));
+
+  if (newEntries.length === 0) { msgEl.textContent = "All files already indexed"; msgEl.style.color = "#60a5fa"; return; }
+
+  msgEl.textContent = "";
+  let added = 0, failed = 0;
+  document.getElementById("progressArea").innerHTML = '<div class="progress-text" id="progressText">Starting…</div><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>';
+
+  for (let i = 0; i < newEntries.length; i++) {
+    const entry = newEntries[i];
+    const pct = Math.round(((i + 1) / newEntries.length) * 100);
+    document.getElementById("progressText").textContent = "Indexing " + (i+1) + "/" + newEntries.length;
+    document.getElementById("progressFill").style.width = pct + "%";
+
+    try {
+      const data = await figmaGet("https://api.figma.com/v1/files/" + entry.key + "?depth=10");
+      const name = data.name || "Untitled";
+      
+      const pagesData = [];
+      const frames = [];
+      const allText = [];
+
+      if (data.document && data.document.children) {
+        for (const page of data.document.children) {
+          const pageFrames = [];
+          collectFrameNodes(page, pageFrames, page.id);
+          frames.push(...pageFrames);
+          
+          for (const frame of pageFrames) {
+            if (frame.text) allText.push(...frame.text);
+          }
+          
+          pagesData.push({ name: page.name, id: page.id });
         }
-        if (matched.length > 8) matchInfo += '<span style="font-size:10px;color:var(--text-muted)">+'+(matched.length-8)+' more</span>';
-        matchInfo += '</div>';
+      }
+
+      state.files.push({
+        id: entry.key,
+        name: name,
+        projectName: "Untagged",
+        module: "Other",
+        lastModified: data.lastModified || "",
+        link: entry.url,
+        pages: pagesData.map(p => p.name),
+        searchText: [name, ...pagesData.map(p => p.name), ...frames.map(f => f.name), ...allText].join(" ").toLowerCase()
+      });
+
+      fullData[entry.key] = { pagesData, frames };
+      added++;
+    } catch (e) {
+      console.warn("Failed:", entry.key, e.message);
+      failed++;
+    }
+
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+  document.getElementById("progressArea").innerHTML = "";
+  msgEl.textContent = "Added " + added + " files" + (failed > 0 ? " (" + failed + " failed)" : "");
+  msgEl.style.color = "#6ee7b7";
+  document.getElementById("urlInput").value = "";
+  document.getElementById("exportBtn").disabled = state.files.length === 0;
+  renderFilesList();
+  updateStats();
+}
+
+async function updateFile(fileId) {
+  if (!confirm("Refresh this file?")) return;
+  if (!state.token) { alert("Save token first"); return; }
+
+  const fileIdx = state.files.findIndex(f => f.id === fileId);
+  if (fileIdx === -1) return;
+
+  const file = state.files[fileIdx];
+  const msgEl = document.getElementById("indexMsg");
+  msgEl.textContent = "Updating " + file.name + "…";
+  msgEl.style.color = "#60a5fa";
+
+  try {
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 30000));
+    const data = await Promise.race([figmaGet("https://api.figma.com/v1/files/" + fileId + "?depth=10"), timeoutPromise]);
+
+    const pagesData = [];
+    const frames = [];
+    const allText = [];
+
+    if (data.document && data.document.children) {
+      for (const page of data.document.children) {
+        const pageFrames = [];
+        collectFrameNodes(page, pageFrames, page.id);
+        frames.push(...pageFrames);
+        
+        for (const frame of pageFrames) {
+          if (frame.text) allText.push(...frame.text);
+        }
+        
+        pagesData.push({ name: page.name, id: page.id });
       }
     }
 
-    h += '<div class="file-row">';
-    h += '<div style="min-width:0"><a href="'+esc(cleanLink)+'" target="_blank" rel="noopener" class="file-name">'+esc(f.name)+'</a><div class="file-project">'+esc(f.projectName)+'</div>'+matchInfo+'</div>';
-    h += '<div style="padding-top:2px"><span class="tag">'+(f.module||"Other")+'</span></div>';
-    h += '<div class="time">'+timeAgo(f.lastModified)+'</div>';
-    h += '<div style="display:flex;justify-content:flex-end;padding-top:4px"><span class="staleness-dot" style="background:'+STALE_COLORS[s]+'"></span></div>';
+    state.files[fileIdx].lastModified = data.lastModified || "";
+    state.files[fileIdx].pages = pagesData.map(p => p.name);
+    
+    // Store searchText temporarily in fullData only, not in state.files localStorage
+    fullData[fileId] = { 
+      pagesData, 
+      frames,
+      searchText: [state.files[fileIdx].name, ...pagesData.map(p => p.name), ...frames.map(f => f.name), ...allText].join(" ").toLowerCase()
+    };
+
+    localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+
+    msgEl.textContent = "✓ Updated " + file.name;
+    msgEl.style.color = "#6ee7b7";
+    renderFilesList();
+    updateStats();
+  } catch (e) {
+    msgEl.textContent = "Failed: " + e.message;
+    msgEl.style.color = "#fca5a5";
+  }
+}
+
+async function refreshAllFiles() {
+  if (!confirm("Refresh all " + state.files.length + " files? This may take " + Math.ceil(state.files.length * 0.5) + " minutes.")) return;
+  if (!state.token) { alert("Save token first"); return; }
+
+  const msgEl = document.getElementById("indexMsg");
+  msgEl.textContent = "Starting refresh…";
+  msgEl.style.color = "#60a5fa";
+
+  let updated = 0, failed = 0;
+
+  for (let i = 0; i < state.files.length; i++) {
+    const file = state.files[i];
+    msgEl.textContent = "Refreshing " + (i+1) + "/" + state.files.length + ": " + file.name + "…";
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 30000));
+      const data = await Promise.race([figmaGet("https://api.figma.com/v1/files/" + file.id + "?depth=10"), timeoutPromise]);
+
+      const pagesData = [];
+      const frames = [];
+      const allText = [];
+
+      if (data.document && data.document.children) {
+        for (const page of data.document.children) {
+          const pageFrames = [];
+          collectFrameNodes(page, pageFrames, page.id);
+          frames.push(...pageFrames);
+          
+          for (const frame of pageFrames) {
+            if (frame.text) allText.push(...frame.text);
+          }
+          
+          pagesData.push({ name: page.name, id: page.id });
+        }
+      }
+
+      state.files[i].lastModified = data.lastModified || "";
+      state.files[i].pages = pagesData.map(p => p.name);
+      
+      // Store searchText in fullData only, not in localStorage
+      fullData[file.id] = { 
+        pagesData, 
+        frames,
+        searchText: [state.files[i].name, ...pagesData.map(p => p.name), ...frames.map(f => f.name), ...allText].join(" ").toLowerCase()
+      };
+      updated++;
+    } catch (e) {
+      console.warn("Failed:", file.id, e.message);
+      failed++;
+    }
+
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+
+  msgEl.textContent = "✓ Refreshed " + updated + " files" + (failed > 0 ? " (" + failed + " failed)" : "") + " - Ready to export!";
+  msgEl.style.color = "#6ee7b7";
+  renderFilesList();
+  updateStats();
+}
+
+function deleteFile(fileId) {
+  if (!confirm("Delete this file?")) return;
+  state.files = state.files.filter(f => f.id !== fileId);
+  delete fullData[fileId];
+  localStorage.setItem(STORAGE_FILES, JSON.stringify(state.files));
+  renderFilesList();
+  updateStats();
+  document.getElementById("exportBtn").disabled = state.files.length === 0;
+}
+
+function renderFilesList() {
+  const el = document.getElementById("filesList");
+  if (state.files.length === 0) {
+    el.innerHTML = '<div style="padding:16px;font-size:12px;color:rgba(255,255,255,0.35)">No files indexed</div>';
+    return;
+  }
+
+  let h = '';
+  for (const f of state.files) {
+    const hasData = fullData[f.id] ? true : false;
+    const frames = hasData ? fullData[f.id].frames.length : 0;
+    const status = hasData ? '' : ' (need update)';
+    h += '<div class="file-item">';
+    h += '<div class="file-info"><div class="file-name">' + f.name + '</div><div class="file-meta">' + frames + ' frames • ' + f.projectName + status + '</div></div>';
+    h += '<div class="file-actions"><button class="btn btn-sm" style="background:rgba(96,165,250,0.12);color:#60a5fa;border-color:rgba(96,165,250,0.2)" onclick="updateFile(\'' + f.id + '\')">⟳</button><button class="btn btn-sm btn-danger" onclick="deleteFile(\'' + f.id + '\')">✕</button></div>';
     h += '</div>';
   }
   el.innerHTML = h;
 }
 
-loadData();
+function updateStats() {
+  const total = state.files.length;
+  const frames = Object.values(fullData).reduce((sum, d) => sum + (d.frames ? d.frames.length : 0), 0);
+  document.getElementById("statsArea").innerHTML = '<strong>' + total + ' files</strong> • ' + frames + ' frames';
+  document.getElementById("exportBtn").disabled = total === 0;
+}
+
+function exportData() {
+  // fullData is kept in memory only (not in localStorage) - check if we have the data
+  console.log("Export triggered. Files in state:", state.files.length, "Files in fullData:", Object.keys(fullData).length);
+  
+  if (state.files.length === 0) {
+    alert("No files indexed.");
+    return;
+  }
+
+  if (Object.keys(fullData).length === 0) {
+    alert("No file data in memory. You need to refresh/update at least one file first.");
+    return;
+  }
+  
+  const exportFiles = state.files.map(f => {
+    const hasData = fullData[f.id] ? true : false;
+    console.log("Exporting:", f.name, "has fullData:", hasData);
+    return {
+      id: f.id,
+      name: f.name,
+      projectName: f.projectName,
+      module: f.module,
+      lastModified: f.lastModified,
+      link: f.link,
+      pages: f.pages,
+      searchText: hasData ? fullData[f.id].searchText : f.name.toLowerCase(),
+      frames: hasData ? fullData[f.id].frames.map(fr => ({ 
+        name: fr.name, 
+        id: fr.id
+      })) : []
+      // Keep frame names/IDs only - removed text content to reduce size
+    };
+  });
+
+  const json = JSON.stringify(exportFiles, null, 2);
+  console.log("Export JSON size:", json.length, "bytes");
+  
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "figma-directory-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("tokenInput").value = state.token;
+if (state.token) document.getElementById("tokenStatus").textContent = "✓ Saved";
+renderFilesList();
+updateStats();
 </script>
 </body>
 </html>
