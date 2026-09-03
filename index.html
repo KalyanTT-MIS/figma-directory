@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Figma Directory</title>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.02);--surface-hover:rgba(139,92,246,0.08);--border:rgba(255,255,255,0.06);--text:#e4e4e7;--text-dim:rgba(255,255,255,0.35);--text-muted:rgba(255,255,255,0.25);--accent:#a78bfa;--accent-dim:rgba(139,92,246,0.2);--accent-border:rgba(139,92,246,0.15);--tag-bg:rgba(139,92,246,0.1);--tag-text:#c4b5fd;--fresh:#10b981;--recent:#60a5fa;--aging:#f59e0b;--stale:#ef4444}
@@ -66,16 +67,25 @@ let state = { files: [], search: "", moduleFilter: "All", projectFilter: "All", 
 
 async function loadData() {
   try {
-    const url = "https://kalyantt-mis.github.io/figma-directory/figma-directory-data.json";
-    console.log("Fetching JSON from:", url);
+    const url = "https://kalyantt-mis.github.io/figma-directory/figma-directory-data.json.gz";
+    console.log("Fetching gzipped JSON from:", url);
     const res = await fetch(url);
     console.log("Fetch response status:", res.status);
     if (!res.ok) throw new Error("Data file not found (status: " + res.status + ")");
-    state.files = await res.json();
-    console.log("Loaded", state.files.length, "files");
+    
+    // Get the compressed data as ArrayBuffer
+    const compressed = await res.arrayBuffer();
+    console.log("Compressed size:", compressed.byteLength, "bytes");
+    
+    // Decompress using pako
+    const decompressed = pako.ungzip(new Uint8Array(compressed));
+    const jsonText = new TextDecoder().decode(decompressed);
+    state.files = JSON.parse(jsonText);
+    
+    console.log("Decompressed and loaded", state.files.length, "files");
   } catch (e) {
     console.error("Load error:", e);
-    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Make sure figma-directory-data.json is in repo root.</div></div>';
+    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Error: ' + e.message + '<br><br>Make sure figma-directory-data.json.gz is in repo root.</div></div>';
     return;
   }
   render();
