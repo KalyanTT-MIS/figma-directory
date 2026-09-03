@@ -66,16 +66,16 @@ let state = { files: [], search: "", moduleFilter: "All", projectFilter: "All", 
 
 async function loadData() {
   try {
-    const url = "https://github.com/KalyanTT-MIS/figma-directory/releases/download/v1/figma-directory-data.json";
-    console.log("Fetching from:", url);
+    const url = "https://kalyantt-mis.github.io/figma-directory/figma-directory-data.json";
+    console.log("Fetching JSON from:", url);
     const res = await fetch(url);
-    console.log("Fetch response status:", res.status, res.statusText);
+    console.log("Fetch response status:", res.status);
     if (!res.ok) throw new Error("Data file not found (status: " + res.status + ")");
     state.files = await res.json();
     console.log("Loaded", state.files.length, "files");
   } catch (e) {
     console.error("Load error:", e);
-    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Error: ' + e.message + '<br><br>Check console (F12) for details.</div></div>';
+    document.getElementById("mainContent").innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div style="font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:6px">Data file not found</div><div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto">Make sure figma-directory-data.json is in repo root.</div></div>';
     return;
   }
   render();
